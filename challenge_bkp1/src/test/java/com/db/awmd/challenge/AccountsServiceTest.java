@@ -5,7 +5,9 @@ import static org.junit.Assert.fail;
 
 import com.db.awmd.challenge.domain.Account;
 import com.db.awmd.challenge.domain.PaymentTransaction;
+import com.db.awmd.challenge.entity.TransactionalEntity;
 import com.db.awmd.challenge.exception.DuplicateAccountIdException;
+import com.db.awmd.challenge.exception.PaymentTrxException;
 import com.db.awmd.challenge.service.AccountsService;
 import java.math.BigDecimal;
 
@@ -15,7 +17,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.test.context.junit4.SpringRunner;
 
 @RunWith(SpringRunner.class)
@@ -56,7 +57,7 @@ public class AccountsServiceTest {
   }
 
   @Test
-  public void paymentProcessingTest() throws Exception{
+  public void accountTrnx_fundTransferService() throws Exception{
     try {
       Account senderAccount = new Account("Id-123");
       senderAccount.setBalance(new BigDecimal(1000));
@@ -69,23 +70,24 @@ public class AccountsServiceTest {
       assertThat(this.accountsService.getAccount("Id-345")).isEqualTo(receiverAccount);
 
       PaymentTransaction paymentTransaction = new PaymentTransaction();
-      BigDecimal debitAmt = BigDecimal.valueOf(500);
-      paymentTransaction.setDebitPaymt(debitAmt);
+      paymentTransaction.setReceiverAccount(receiverAccount.getAccountId());
+      paymentTransaction.setSenderAccount(senderAccount.getAccountId());
+      paymentTransaction.setDebitPaymt(senderAccount.getBalance());
 
-      this.accountsService.paymentProcessing(senderAccount, receiverAccount, paymentTransaction);
+      this.accountsService.paymentTrnx(paymentTransaction);
 
-    }catch (Exception ex) {
+    }catch (PaymentTrxException ex) {
       assertThat(ex.getMessage());
     }
   }
 
   @Test
-  public void paymentTrnxTest() throws Exception{
+  public void nullAccountTrnx_fundTransferService() throws Exception{
     try {
-      Account senderAccount = new Account("Id-123");
+      Account senderAccount = new Account("");
       senderAccount.setBalance(new BigDecimal(1000));
       this.accountsService.createAccount(senderAccount);
-      assertThat(this.accountsService.getAccount("")).isEqualTo(senderAccount);
+      assertThat(this.accountsService.getAccount("Id-123")).isEqualTo(senderAccount);
 
       Account receiverAccount = new Account("Id-345");
       receiverAccount.setBalance(new BigDecimal(500));
@@ -95,44 +97,17 @@ public class AccountsServiceTest {
       PaymentTransaction paymentTransaction = new PaymentTransaction();
       paymentTransaction.setReceiverAccount(receiverAccount.getAccountId());
       paymentTransaction.setSenderAccount(senderAccount.getAccountId());
-      BigDecimal debitAmt = BigDecimal.valueOf(500);
-      paymentTransaction.setDebitPaymt(debitAmt);
+      paymentTransaction.setDebitPaymt(senderAccount.getBalance());
 
       this.accountsService.paymentTrnx(paymentTransaction);
 
-    }catch (Exception ex) {
+    }catch (PaymentTrxException ex) {
       assertThat(ex.getMessage());
     }
   }
 
   @Test
-  public void paymentTrnxNullExc() throws Exception{
-    try {
-      Account senderAccount = new Account("Id-123");
-      senderAccount.setBalance(new BigDecimal(1000));
-      this.accountsService.createAccount(senderAccount);
-      assertThat(this.accountsService.getAccount("")).isEqualTo(senderAccount);
-
-      Account receiverAccount = new Account("Id-345");
-      receiverAccount.setBalance(new BigDecimal(500));
-      this.accountsService.createAccount(receiverAccount);
-      assertThat(this.accountsService.getAccount("Id-345")).isEqualTo(receiverAccount);
-
-      PaymentTransaction paymentTransaction = new PaymentTransaction();
-      paymentTransaction.setReceiverAccount(receiverAccount.getAccountId());
-      paymentTransaction.setSenderAccount(senderAccount.getAccountId());
-      BigDecimal debitAmt = BigDecimal.valueOf(5000);
-      paymentTransaction.setDebitPaymt(debitAmt);
-
-      this.accountsService.paymentTrnx(paymentTransaction);
-
-    }catch (Exception ex) {
-      assertThat(ex.getMessage());
-    }
-  }
-
-  @Test
-  public void saveTrnxTest(){
+  public void saveTrnx(){
     try{
       Account senderAccount = new Account("Id-123");
       senderAccount.setBalance(new BigDecimal(1000));
@@ -160,7 +135,7 @@ public class AccountsServiceTest {
   }
 
   @Test
-  public void updatedPaymentMappingTest(){
+  public void updatedPaymentMapping(){
     try{
       Account senderAccount = new Account("Id-123");
       senderAccount.setBalance(new BigDecimal(1000));
@@ -187,7 +162,7 @@ public class AccountsServiceTest {
       Account account = new Account(receiverAccount.getAccountId());
       //send notification for Fund transfer
       emailNotificationService.notifyAboutTransfer(account, message);
-      this.accountsService.updatedPaymentMapping(paymentTransaction);
+      this.accountsService.updatedPaymentMapping(paymentTransaction, senderAccount, receiverAccount);
     }catch (Exception ex){
       assertThat(ex.getMessage());
     }

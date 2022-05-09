@@ -18,7 +18,7 @@ public class PaymentTransaction {
     private BigDecimal debitPaymt;
     @NotNull(message = "Sender Account number must not null")
     private String senderAccount;
-    @NotNull(message = "Receiver Account number must not null")
+    @NotNull(message = "Sender Account number must not null")
     private String receiverAccount;
     private BigDecimal creditPaymt;
 
